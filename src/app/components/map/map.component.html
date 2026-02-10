@@ -1,0 +1,100 @@
+<div class="map-container">
+  <header class="map-header">
+    <div class="header-group">
+      <label for="metric-select" class="metric-label">Metric</label>
+      <select
+        id="metric-select"
+        class="metric-select"
+        [ngModel]="currentMetric"
+        (ngModelChange)="currentMetric = $event"
+      >
+        @for (opt of metricOptions; track opt.value) {
+          <option [value]="opt.value">{{ opt.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="header-group">
+      <label for="display-type-select" class="metric-label">Display</label>
+      <select
+        id="display-type-select"
+        class="metric-select"
+        [ngModel]="currentDisplayType"
+        (ngModelChange)="currentDisplayType = $event"
+      >
+        @for (opt of displayTypeOptions; track opt.value) {
+          <option [value]="opt.value">{{ opt.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="header-group">
+      <label for="base-layer-select" class="metric-label">Map</label>
+      <select
+        id="base-layer-select"
+        class="metric-select"
+        [ngModel]="currentBaseLayer"
+        (ngModelChange)="currentBaseLayer = $event"
+      >
+        @for (opt of baseLayerOptions; track opt.value) {
+          <option [value]="opt.value">{{ opt.label }}</option>
+        }
+      </select>
+    </div>
+  </header>
+
+  <div class="drilldown-bar">
+    <button type="button" class="drill-btn" (click)="goToWorld()">World</button>
+    @if (drillLevel() === 'country') {
+      <span class="drill-sep">›</span>
+      <span class="drill-current">By country</span>
+    }
+    @if (drillLevel() === 'state' && selectedCountry()) {
+      <span class="drill-sep">›</span>
+      <select class="drill-select" [ngModel]="selectedCountry()" (ngModelChange)="onCountrySelect($event)">
+        @for (c of countries(); track c) {
+          <option [value]="c">{{ c }}</option>
+        }
+      </select>
+      <button type="button" class="drill-btn back-btn" (click)="goBackFromState()">Back</button>
+    }
+    @if (drillLevel() === 'state') {
+      <span class="drill-sep">›</span>
+      <span class="drill-current">By state</span>
+      <span class="drill-sep">|</span>
+      <label for="state-drill-select" class="drill-label">To city:</label>
+      <select id="state-drill-select" class="drill-select" (change)="onStateSelectFromSelect($any($event.target).value)">
+        <option value="">— Select state —</option>
+        @for (s of states(); track s) {
+          <option [value]="s">{{ s }}</option>
+        }
+      </select>
+    }
+    @if (drillLevel() === 'city' && selectedCountry()) {
+      <span class="drill-sep">›</span>
+      <select class="drill-select" [ngModel]="selectedCountry()" (ngModelChange)="onCountrySelect($event)">
+        @for (c of countries(); track c) {
+          <option [value]="c">{{ c }}</option>
+        }
+      </select>
+      <span class="drill-sep">›</span>
+      <select class="drill-select" [ngModel]="selectedState()" (ngModelChange)="onStateSelect($event)">
+        @for (s of states(); track s) {
+          <option [value]="s">{{ s }}</option>
+        }
+      </select>
+      <button type="button" class="drill-btn back-btn" (click)="goBackFromCity()">Back</button>
+    }
+    @if (drillLevel() === 'city') {
+      <span class="drill-sep">›</span>
+      <span class="drill-current">By city</span>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="map-overlay">Loading survey data…</div>
+  }
+  @if (error()) {
+    <div class="map-overlay map-error">{{ error() }}</div>
+  }
+
+  <div id="survey-map" class="survey-map"></div>
+</div>

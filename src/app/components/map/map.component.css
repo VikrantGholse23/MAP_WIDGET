@@ -1,0 +1,166 @@
+.map-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 400px;
+}
+
+.map-header {
+  position: absolute;
+  top: 10px;
+  left: 50px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.header-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drilldown-bar {
+  position: absolute;
+  top: 54px;
+  left: 50px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  font-size: 13px;
+}
+
+.drill-btn {
+  padding: 4px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.drill-btn:hover {
+  background: #f3f4f6;
+}
+
+.back-btn {
+  margin-left: 4px;
+  color: #2563eb;
+  border-color: #93c5fd;
+}
+
+.drill-sep {
+  color: #9ca3af;
+  margin: 0 2px;
+}
+
+.drill-current {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.drill-label {
+  color: #6b7280;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.drill-select {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.metric-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.metric-select {
+  font-size: 14px;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #111827;
+  cursor: pointer;
+}
+
+.metric-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.survey-map {
+  width: 100%;
+  height: 100%;
+  background: #f3f4f6;
+}
+
+.map-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 999;
+  padding: 16px 24px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 15px;
+  color: #374151;
+}
+
+.map-error {
+  color: #b91c1c;
+  max-width: 320px;
+  text-align: center;
+}
+
+/* Tooltip styling for Leaflet */
+:host ::ng-deep .survey-marker-tooltip {
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Time display markers */
+:host ::ng-deep .survey-time-marker {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+:host ::ng-deep .survey-time-label {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #1f2937;
+  color: #fff;
+  font-size: 11px;
+  border-radius: 4px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
