@@ -41,52 +41,54 @@
     </div>
   </header>
 
-  <div class="drilldown-bar">
-    <button type="button" class="drill-btn" (click)="goToWorld()">World</button>
-    @if (drillLevel() === 'country') {
-      <span class="drill-sep">›</span>
-      <span class="drill-current">By country</span>
+  <!-- Breadcrumb drill-down: click any segment to jump to that level -->
+  <nav class="drilldown-bar" aria-label="Drill-down navigation">
+    <button type="button" class="drill-btn breadcrumb-item" (click)="goToWorld()">World</button>
+    @if (drillLevel() !== 'country') {
+      <span class="drill-sep" aria-hidden="true">›</span>
+      <button
+        type="button"
+        class="drill-btn breadcrumb-item"
+        (click)="selectedCountry() && onCountrySelect(selectedCountry()!)"
+      >
+        {{ selectedCountry() ?? 'Country' }}
+      </button>
     }
-    @if (drillLevel() === 'state' && selectedCountry()) {
-      <span class="drill-sep">›</span>
-      <select class="drill-select" [ngModel]="selectedCountry()" (ngModelChange)="onCountrySelect($event)">
-        @for (c of countries(); track c) {
-          <option [value]="c">{{ c }}</option>
-        }
-      </select>
-      <button type="button" class="drill-btn back-btn" (click)="goBackFromState()">Back</button>
+    @if (drillLevel() === 'country') {
+      <span class="drill-sep" aria-hidden="true">›</span>
+      <span class="drill-current">Countries (click a region to drill)</span>
     }
     @if (drillLevel() === 'state') {
-      <span class="drill-sep">›</span>
-      <span class="drill-current">By state</span>
-      <span class="drill-sep">|</span>
-      <label for="state-drill-select" class="drill-label">To city:</label>
-      <select id="state-drill-select" class="drill-select" (change)="onStateSelectFromSelect($any($event.target).value)">
+      <span class="drill-sep" aria-hidden="true">›</span>
+      <span class="drill-current">States</span>
+      <span class="drill-sep" aria-hidden="true">|</span>
+      <label for="state-drill-select" class="drill-label">Jump to state:</label>
+      <select id="state-drill-select" class="drill-select" [ngModel]="selectedState()" (ngModelChange)="onStateSelectFromSelect($event)">
         <option value="">— Select state —</option>
         @for (s of states(); track s) {
           <option [value]="s">{{ s }}</option>
         }
       </select>
-    }
-    @if (drillLevel() === 'city' && selectedCountry()) {
-      <span class="drill-sep">›</span>
-      <select class="drill-select" [ngModel]="selectedCountry()" (ngModelChange)="onCountrySelect($event)">
-        @for (c of countries(); track c) {
-          <option [value]="c">{{ c }}</option>
-        }
-      </select>
-      <span class="drill-sep">›</span>
-      <select class="drill-select" [ngModel]="selectedState()" (ngModelChange)="onStateSelect($event)">
-        @for (s of states(); track s) {
-          <option [value]="s">{{ s }}</option>
-        }
-      </select>
-      <button type="button" class="drill-btn back-btn" (click)="goBackFromCity()">Back</button>
+      <button type="button" class="drill-btn back-btn" (click)="goBackFromState()">← Back</button>
     }
     @if (drillLevel() === 'city') {
-      <span class="drill-sep">›</span>
-      <span class="drill-current">By city</span>
+      <span class="drill-sep" aria-hidden="true">›</span>
+      <span class="drill-current">Cities</span>
+      <button type="button" class="drill-btn back-btn" (click)="goBackFromCity()">← Back to states</button>
     }
+  </nav>
+
+  <!-- Legend: color scale for current metric -->
+  <div class="map-legend" aria-label="Score legend">
+    <span class="legend-title">{{ selectedMetric() === 'nps' ? 'NPS' : selectedMetric() === 'csat' ? 'CSAT' : 'CES' }}</span>
+    <div class="legend-items">
+      @for (r of legendRanges(); track r.color) {
+        <span class="legend-item">
+          <i class="legend-swatch" [style.background-color]="r.color"></i>
+          <span class="legend-label">{{ r.label }}</span>
+        </span>
+      }
+    </div>
   </div>
 
   @if (loading()) {

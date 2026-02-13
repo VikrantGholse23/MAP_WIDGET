@@ -56,10 +56,70 @@
   background: #f3f4f6;
 }
 
+.drill-btn.breadcrumb-item {
+  font-weight: 500;
+}
+
+.drill-btn.breadcrumb-item:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
 .back-btn {
   margin-left: 4px;
   color: #2563eb;
   border-color: #93c5fd;
+}
+
+.back-btn:hover {
+  background: #eff6ff;
+}
+
+/* Legend */
+.map-legend {
+  position: absolute;
+  bottom: 24px;
+  right: 12px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #fff;
+  padding: 10px 12px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  font-size: 12px;
+}
+
+.legend-title {
+  font-weight: 600;
+  color: #374151;
+}
+
+.legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.legend-label {
+  color: #6b7280;
 }
 
 .drill-sep {
@@ -145,6 +205,11 @@
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Choropleth country polygons: clickable */
+:host ::ng-deep .leaflet-interactive {
+  cursor: pointer;
 }
 
 /* Time display markers */

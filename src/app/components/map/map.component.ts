@@ -13,6 +13,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
 import { MapDataService } from '../../services/map-data.service';
+import { GeoService, geoNameForCountry } from '../../services/geo.service';
 import {
   SurveyCity,
   SurveyMetric,
@@ -26,19 +27,34 @@ const RADIUS_MIN = 5;
 const RADIUS_MAX = 25;
 const RADIUS_DIVISOR = 10;
 
+/** Safe numeric value for metrics (handles NaN/undefined). */
+export function safeMetricValue(value: number | undefined): number {
+  const n = Number(value);
+  return typeof value === 'number' && !Number.isNaN(n) ? n : 0;
+}
+
+/** Format metric for display; use "—" when value is missing or NaN. */
+export function formatMetricValue(value: number | undefined, metric: SurveyMetric): string {
+  const n = safeMetricValue(value);
+  if (typeof value !== 'number' || Number.isNaN(value)) return '—';
+  if (metric === 'ces') return n.toFixed(1);
+  return String(Math.round(n));
+}
+
 export function getColor(metric: SurveyMetric, value: number): string {
+  const v = safeMetricValue(value);
   switch (metric) {
     case 'nps':
-      if (value >= 50) return '#22c55e';
-      if (value >= 0) return '#eab308';
+      if (v >= 50) return '#22c55e';
+      if (v >= 0) return '#eab308';
       return '#ef4444';
     case 'csat':
-      if (value >= 80) return '#22c55e';
-      if (value >= 60) return '#eab308';
+      if (v >= 80) return '#22c55e';
+      if (v >= 60) return '#eab308';
       return '#ef4444';
     case 'ces':
-      if (value < 3) return '#22c55e';
-      if (value <= 5) return '#eab308';
+      if (v < 3) return '#22c55e';
+      if (v <= 5) return '#eab308';
       return '#ef4444';
     default:
       return '#6b7280';
@@ -75,22 +91,25 @@ function aggregateByCountry(cities: SurveyCity[]): SurveyAggregate[] {
     const key = c.country;
     const existing = byCountry.get(key);
     const count = c.responseCount;
+    const nps = Number(c.nps);
+    const csat = typeof c.csat === 'number' && !Number.isNaN(c.csat) ? c.csat : 50;
+    const ces = typeof c.ces === 'number' && !Number.isNaN(c.ces) ? c.ces : 3;
     if (!existing) {
       byCountry.set(key, {
         lat: c.latitude * count,
         lng: c.longitude * count,
-        nps: c.nps * count,
-        csat: c.csat * count,
-        ces: c.ces * count,
+        nps: (Number.isNaN(nps) ? 0 : nps) * count,
+        csat: csat * count,
+        ces: ces * count,
         count,
         date: c.surveyDate
       });
     } else {
       existing.lat += c.latitude * count;
       existing.lng += c.longitude * count;
-      existing.nps += c.nps * count;
-      existing.csat += c.csat * count;
-      existing.ces += c.ces * count;
+      existing.nps += (Number.isNaN(nps) ? 0 : nps) * count;
+      existing.csat += csat * count;
+      existing.ces += ces * count;
       existing.count += count;
       if (c.surveyDate && (!existing.date || c.surveyDate > (existing.date ?? ''))) existing.date = c.surveyDate;
     }
@@ -116,22 +135,25 @@ function aggregateByState(cities: SurveyCity[], country: string): SurveyAggregat
     const key = c.state || c.country;
     const existing = byState.get(key);
     const count = c.responseCount;
+    const nps = Number(c.nps);
+    const csat = typeof c.csat === 'number' && !Number.isNaN(c.csat) ? c.csat : 50;
+    const ces = typeof c.ces === 'number' && !Number.isNaN(c.ces) ? c.ces : 3;
     if (!existing) {
       byState.set(key, {
         lat: c.latitude * count,
         lng: c.longitude * count,
-        nps: c.nps * count,
-        csat: c.csat * count,
-        ces: c.ces * count,
+        nps: (Number.isNaN(nps) ? 0 : nps) * count,
+        csat: csat * count,
+        ces: ces * count,
         count,
         date: c.surveyDate
       });
     } else {
       existing.lat += c.latitude * count;
       existing.lng += c.longitude * count;
-      existing.nps += c.nps * count;
-      existing.csat += c.csat * count;
-      existing.ces += c.ces * count;
+      existing.nps += (Number.isNaN(nps) ? 0 : nps) * count;
+      existing.csat += csat * count;
+      existing.ces += ces * count;
       existing.count += count;
       if (c.surveyDate && (!existing.date || c.surveyDate > (existing.date ?? ''))) existing.date = c.surveyDate;
     }
@@ -160,11 +182,13 @@ function aggregateByState(cities: SurveyCity[], country: string): SurveyAggregat
 })
 export class MapComponent implements AfterViewInit, OnDestroy {
   private readonly mapDataService = inject(MapDataService);
+  private readonly geoService = inject(GeoService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
 
   private map: L.Map | null = null;
   private markerLayers: L.Layer[] = [];
+  private geoJsonLayer: L.GeoJSON | null = null;
   private baseLayers: Record<string, L.TileLayer> = {};
 
   readonly selectedMetric = signal<SurveyMetric>('nps');
@@ -265,6 +289,14 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     this.baseLayerKey.set(value);
     this.switchBaseLayer(value);
   }
+
+  /** Legend info for current metric (industry-standard color scale). */
+  readonly legendRanges = computed(() => {
+    const metric = this.selectedMetric();
+    if (metric === 'nps') return [{ label: '50+', color: '#22c55e' }, { label: '0–49', color: '#eab308' }, { label: '<0', color: '#ef4444' }];
+    if (metric === 'csat') return [{ label: '80+', color: '#22c55e' }, { label: '60–79', color: '#eab308' }, { label: '<60', color: '#ef4444' }];
+    return [{ label: '1–2.9', color: '#22c55e' }, { label: '3–5', color: '#eab308' }, { label: '>5', color: '#ef4444' }];
+  });
 
   ngAfterViewInit(): void {
     this.initMap();
@@ -385,11 +417,19 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     const data = this.currentMapData();
     const metric = this.selectedMetric();
     const displayType = this.displayType();
+    const drillLevel = this.drillLevel();
     const isAggregate = (d: SurveyAggregate | SurveyCity): d is SurveyAggregate => 'level' in d && 'name' in d;
 
+    const isCountryChoropleth = displayType === 'area' && drillLevel === 'country';
+    if (isCountryChoropleth && data.length > 0) {
+      this.addChoroplethLayer(data as SurveyAggregate[], metric);
+      return;
+    }
+
     for (const item of data) {
-      const value = item[metric];
-      const color = getColor(metric, value);
+      const value = item[metric] as number | undefined;
+      const safeVal = safeMetricValue(value);
+      const color = getColor(metric, safeVal);
       const label = isAggregate(item) ? item.name : `${(item as SurveyCity).city}, ${(item as SurveyCity).state ? (item as SurveyCity).state + ', ' : ''}${(item as SurveyCity).country}`;
       const responseCount = item.responseCount;
       const surveyDate = item.surveyDate;
@@ -403,7 +443,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
           iconAnchor: [60, 12]
         });
         const marker = L.marker([item.latitude, item.longitude], { icon: divIcon });
-        const tooltipContent = this.buildTooltipContent(item, metric, value, label, responseCount, surveyDate);
+        const tooltipContent = this.buildTooltipContent(item, metric, safeVal, label, responseCount, surveyDate);
         marker.bindTooltip(tooltipContent, {
           permanent: false,
           direction: 'top',
@@ -428,7 +468,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
           opacity: 0.8,
           fillOpacity: 0.4
         });
-        const tooltipContent = this.buildTooltipContent(item, metric, value, label, responseCount, surveyDate);
+        const tooltipContent = this.buildTooltipContent(item, metric, safeVal, label, responseCount, surveyDate);
         areaCircle.bindTooltip(tooltipContent, {
           permanent: false,
           direction: 'top',
@@ -452,7 +492,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
           opacity: 1,
           fillOpacity: 0.8
         });
-        const tooltipContent = this.buildTooltipContent(item, metric, value, label, responseCount, surveyDate);
+        const tooltipContent = this.buildTooltipContent(item, metric, safeVal, label, responseCount, surveyDate);
         circle.bindTooltip(tooltipContent, {
           permanent: false,
           direction: 'top',
@@ -481,17 +521,74 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     const metricLabel = METRIC_LABELS[metric];
     const lines = [
       label,
-      `${metricLabel}: ${value}`,
+      `${metricLabel}: ${formatMetricValue(value, metric)}`,
       `Response Count: ${responseCount}`,
-      `NPS: ${item.nps}`,
-      `CSAT: ${item.csat}`,
-      `CES: ${item.ces}`,
+      `NPS: ${formatMetricValue(item.nps, 'nps')}`,
+      `CSAT: ${formatMetricValue(item.csat, 'csat')}`,
+      `CES: ${formatMetricValue(item.ces, 'ces')}`,
       surveyDate ? `Survey: ${formatSurveyTime(surveyDate)}` : null
     ].filter(Boolean) as string[];
     return lines.join('<br>');
   }
 
+  private addChoroplethLayer(aggregates: SurveyAggregate[], metric: SurveyMetric): void {
+    const byGeoName = new Map<string, { value: number; color: string; agg: SurveyAggregate }>();
+    for (const agg of aggregates) {
+      const geoName = geoNameForCountry(agg.name);
+      const value = agg[metric];
+      byGeoName.set(geoName, { value, color: getColor(metric, value), agg });
+    }
+    this.geoService.getCountriesGeoJson().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (geojson) => {
+        if (!this.map) return;
+        const geoLayer = L.geoJSON(geojson, {
+          style: (feature) => {
+            const name = feature?.properties?.['name'];
+            const info = name ? byGeoName.get(name) : undefined;
+            const color = info?.color ?? '#e5e7eb';
+            return {
+              fillColor: color,
+              weight: 1,
+              opacity: 1,
+              color: '#374151',
+              fillOpacity: 0.65
+            };
+          },
+          onEachFeature: (feature, layer) => {
+            const name = feature.properties?.['name'];
+            const info = name ? byGeoName.get(name) : undefined;
+            if (info) {
+              const { agg } = info;
+              const label = agg.name;
+              const content = this.buildTooltipContent(
+                agg,
+                metric,
+                info.value,
+                label,
+                agg.responseCount,
+                agg.surveyDate
+              );
+              layer.bindTooltip(content, {
+                permanent: false,
+                direction: 'top',
+                className: 'survey-marker-tooltip'
+              });
+              layer.on('click', () => this.onCountrySelect(agg.name));
+            }
+          }
+        });
+        geoLayer.addTo(this.map);
+        this.geoJsonLayer = geoLayer;
+        this.fitMapToData();
+      }
+    });
+  }
+
   private clearMarkers(): void {
+    if (this.geoJsonLayer && this.map) {
+      this.map.removeLayer(this.geoJsonLayer);
+      this.geoJsonLayer = null;
+    }
     for (const layer of this.markerLayers) {
       this.map?.removeLayer(layer);
     }

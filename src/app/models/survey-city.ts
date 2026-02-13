@@ -8,8 +8,10 @@ export interface SurveyCity {
   latitude: number;
   longitude: number;
   nps: number;
-  csat: number;
-  ces: number;
+  /** 0–100; optional for backward compatibility (defaults used if missing). */
+  csat?: number;
+  /** 1–7; optional for backward compatibility (defaults used if missing). */
+  ces?: number;
   responseCount: number;
   /** ISO date string for time-based display (e.g. "2024-06-15T10:30:00Z"). */
   surveyDate?: string;
